@@ -11,6 +11,7 @@ import {
   CircularProgress,
   Breadcrumbs,
   Link as MuiLink,
+  AlertColor,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -21,6 +22,7 @@ import { useAuth } from '../contexts/AuthContext';
 import useContacts from '../hooks/useContacts';
 import useConnections from '../hooks/useConnections';
 import { createContact, updateContact, deleteContact } from '../services/contactService';
+import { Contact } from '../types';
 
 const muiInput = {
   '& .MuiOutlinedInput-root': {
@@ -31,8 +33,12 @@ const muiInput = {
   '& .MuiInputLabel-root.Mui-focused': { color: '#0f766e' },
 };
 
-const ContactsPage = ({ showToast }) => {
-  const { connectionId } = useParams();
+interface ContactsPageProps {
+  showToast?: (message: string, severity?: AlertColor) => void;
+}
+
+const ContactsPage = ({ showToast }: ContactsPageProps) => {
+  const { connectionId } = useParams<{ connectionId: string }>();
   const { user } = useAuth();
   const { contacts, loading } = useContacts(user?.uid, connectionId);
   const { connections } = useConnections(user?.uid);
@@ -41,11 +47,11 @@ const ContactsPage = ({ showToast }) => {
   const connection = connections.find((c) => c.id === connectionId);
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingId, setEditingId] = useState(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
-  const [deleteDialog, setDeleteDialog] = useState({ open: false, id: null, name: '' });
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; id: string | null; name: string }>({ open: false, id: null, name: '' });
 
   const openCreate = () => {
     setEditingId(null);
@@ -54,7 +60,7 @@ const ContactsPage = ({ showToast }) => {
     setDialogOpen(true);
   };
 
-  const openEdit = (contact) => {
+  const openEdit = (contact: Contact) => {
     setEditingId(contact.id);
     setName(contact.name);
     setPhone(contact.phone);
@@ -68,7 +74,7 @@ const ContactsPage = ({ showToast }) => {
       if (editingId) {
         await updateContact(editingId, { name: name.trim(), phone: phone.trim() });
         showToast?.('Contato atualizado.');
-      } else {
+      } else if (user?.uid && connectionId) {
         await createContact(user.uid, connectionId, name.trim(), phone.trim());
         showToast?.('Contato criado.');
       }
@@ -85,8 +91,10 @@ const ContactsPage = ({ showToast }) => {
 
   const handleDelete = async () => {
     try {
-      await deleteContact(deleteDialog.id);
-      showToast?.('Contato excluído.');
+      if (deleteDialog.id) {
+        await deleteContact(deleteDialog.id);
+        showToast?.('Contato excluído.');
+      }
     } catch {
       showToast?.('Erro ao excluir contato.', 'error');
     } finally {
@@ -94,7 +102,7 @@ const ContactsPage = ({ showToast }) => {
     }
   };
 
-  const formatPhone = (value) => {
+  const formatPhone = (value: string) => {
     const digits = value.replace(/\D/g, '');
     if (digits.length <= 2) return digits;
     if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;

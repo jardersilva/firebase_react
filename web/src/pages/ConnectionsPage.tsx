@@ -9,6 +9,7 @@ import {
   DialogContent,
   DialogActions,
   CircularProgress,
+  AlertColor,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -17,6 +18,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { useAuth } from '../contexts/AuthContext';
 import useConnections from '../hooks/useConnections';
 import { createConnection, updateConnection, deleteConnection } from '../services/connectionService';
+import { Connection } from '../types';
 
 const muiInput = {
   '& .MuiOutlinedInput-root': {
@@ -27,16 +29,20 @@ const muiInput = {
   '& .MuiInputLabel-root.Mui-focused': { color: '#0f766e' },
 };
 
-const ConnectionsPage = ({ showToast }) => {
+interface ConnectionsPageProps {
+  showToast?: (message: string, severity?: AlertColor) => void;
+}
+
+const ConnectionsPage = ({ showToast }: ConnectionsPageProps) => {
   const { user } = useAuth();
   const { connections, loading } = useConnections(user?.uid);
   const navigate = useNavigate();
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingId, setEditingId] = useState(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
-  const [deleteDialog, setDeleteDialog] = useState({ open: false, id: null, name: '' });
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; id: string | null; name: string }>({ open: false, id: null, name: '' });
 
   const openCreate = () => {
     setEditingId(null);
@@ -44,7 +50,7 @@ const ConnectionsPage = ({ showToast }) => {
     setDialogOpen(true);
   };
 
-  const openEdit = (conn) => {
+  const openEdit = (conn: Connection) => {
     setEditingId(conn.id);
     setName(conn.name);
     setDialogOpen(true);
@@ -57,7 +63,7 @@ const ConnectionsPage = ({ showToast }) => {
       if (editingId) {
         await updateConnection(editingId, { name: name.trim() });
         showToast?.('Conexão atualizada.');
-      } else {
+      } else if (user?.uid) {
         await createConnection(user.uid, name.trim());
         showToast?.('Conexão criada.');
       }
@@ -73,8 +79,10 @@ const ConnectionsPage = ({ showToast }) => {
 
   const handleDelete = async () => {
     try {
-      await deleteConnection(deleteDialog.id);
-      showToast?.('Conexão excluída.');
+      if (deleteDialog.id) {
+        await deleteConnection(deleteDialog.id);
+        showToast?.('Conexão excluída.');
+      }
     } catch {
       showToast?.('Erro ao excluir conexão.', 'error');
     } finally {

@@ -7,12 +7,15 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { Contact } from '../types';
 
-const COLLECTION = 'connections';
+const COLLECTION = 'contacts';
 
-export const createConnection = async (userId, name) => {
+export const createContact = async (userId: string, connectionId: string, name: string, phone: string): Promise<string> => {
   const docRef = await addDoc(collection(db, COLLECTION), {
     name,
+    phone,
+    connectionId,
     userId,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -20,7 +23,7 @@ export const createConnection = async (userId, name) => {
   return docRef.id;
 };
 
-export const updateConnection = async (id, data) => {
+export const updateContact = async (id: string, data: Partial<Contact>): Promise<void> => {
   const ref = doc(db, COLLECTION, id);
   await updateDoc(ref, {
     ...data,
@@ -28,7 +31,7 @@ export const updateConnection = async (id, data) => {
   });
 };
 
-export const deleteConnection = async (id) => {
+export const deleteContact = async (id: string): Promise<void> => {
   const ref = doc(db, COLLECTION, id);
   await deleteDoc(ref);
 };

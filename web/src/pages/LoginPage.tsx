@@ -3,41 +3,30 @@ import { useNavigate, Link } from 'react-router-dom';
 import { TextField, Button, Alert } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
 
-const SignUpPage = () => {
+const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signUp } = useAuth();
+  const { signIn } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
-    if (password !== confirmPassword) {
-      setError('As senhas não coincidem.');
-      return;
-    }
-
-    if (password.length < 6) {
-      setError('A senha deve ter pelo menos 6 caracteres.');
-      return;
-    }
-
     setLoading(true);
 
     try {
-      await signUp(email, password);
+      await signIn(email, password);
       navigate('/connections');
-    } catch (err) {
-      const messages = {
-        'auth/email-already-in-use': 'Este e-mail já está cadastrado.',
+    } catch (err: any) {
+      const messages: Record<string, string> = {
+        'auth/user-not-found': 'Usuário não encontrado.',
+        'auth/wrong-password': 'Senha incorreta.',
         'auth/invalid-email': 'E-mail inválido.',
-        'auth/weak-password': 'Senha muito fraca.',
+        'auth/invalid-credential': 'Credenciais inválidas.',
       };
-      setError(messages[err.code] || 'Erro ao criar conta. Tente novamente.');
+      setError(messages[err.code] || 'Erro ao fazer login. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -49,10 +38,10 @@ const SignUpPage = () => {
       <div className="hidden lg:flex lg:w-[45%] bg-brand-800 items-end p-12">
         <div>
           <h1 className="text-4xl text-white leading-tight mb-3">
-            Cadastre-se
+            Login
           </h1>
           <p className="text-brand-200 text-base leading-relaxed max-w-md">
-            Cadastre-se para começar.
+            Faça login para continuar.
           </p>
         </div>
       </div>
@@ -61,8 +50,8 @@ const SignUpPage = () => {
       <div className="flex-1 flex items-center justify-center px-6">
         <div className="w-full max-w-sm">
           <div className="mb-10">
-            <h1 className="text-3xl text-zinc-900 mb-1">Criar conta</h1>
-            <p className="text-zinc-500 text-sm font-sans">Preencha os dados para começar</p>
+            <h1 className="text-3xl text-zinc-900 mb-1">Entrar</h1>
+            <p className="text-zinc-500 text-sm font-sans">Acesse sua conta para continuar</p>
           </div>
 
           {error && (
@@ -108,24 +97,6 @@ const SignUpPage = () => {
                 '& .MuiInputLabel-root.Mui-focused': { color: '#0f766e' },
               }}
             />
-            <TextField
-              fullWidth
-              label="Confirmar senha"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              variant="outlined"
-              size="small"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  fontFamily: '"DM Sans", sans-serif',
-                  borderRadius: '6px',
-                  '&.Mui-focused fieldset': { borderColor: '#0f766e' },
-                },
-                '& .MuiInputLabel-root.Mui-focused': { color: '#0f766e' },
-              }}
-            />
 
             <Button
               type="submit"
@@ -144,14 +115,14 @@ const SignUpPage = () => {
                 '&:hover': { backgroundColor: '#115e59', boxShadow: 'none' },
               }}
             >
-              {loading ? 'Criando...' : 'Criar conta'}
+              {loading ? 'Entrando...' : 'Entrar'}
             </Button>
           </form>
 
           <p className="text-center text-sm text-zinc-500 mt-6 font-sans">
-            Já tem conta?{' '}
-            <Link to="/login" className="text-brand-700 font-medium hover:underline">
-              Fazer login
+            Não tem conta?{' '}
+            <Link to="/signup" className="text-brand-700 font-medium hover:underline">
+              Criar conta
             </Link>
           </p>
         </div>
@@ -160,4 +131,4 @@ const SignUpPage = () => {
   );
 };
 
-export default SignUpPage;
+export default LoginPage;

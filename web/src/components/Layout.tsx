@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, ReactNode } from 'react';
 import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import {
   AppBar,
@@ -13,6 +13,7 @@ import {
   useMediaQuery,
   Snackbar,
   Alert,
+  AlertColor
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import CableIcon from '@mui/icons-material/Cable';
@@ -21,20 +22,24 @@ import { useAuth } from '../contexts/AuthContext';
 
 const DRAWER_WIDTH = 240;
 
-const Layout = ({ children }) => {
+interface LayoutProps {
+  children: ReactNode | ((props: { showToast: (message: string, severity?: AlertColor) => void }) => ReactNode);
+}
+
+const Layout = ({ children }: LayoutProps) => {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [toast, setToast] = useState({ open: false, message: '', severity: 'success' });
-  const { signOut, user } = useAuth();
+  const [toast, setToast] = useState<{ open: boolean; message: string; severity: AlertColor }>({ open: false, message: '', severity: 'success' });
+  const { logout, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useMediaQuery('(max-width:768px)');
 
   const handleSignOut = async () => {
-    await signOut();
+    await logout();
     navigate('/login');
   };
 
-  const showToast = (message, severity = 'success') => {
+  const showToast = (message: string, severity: AlertColor = 'success') => {
     setToast({ open: true, message, severity });
   };
 

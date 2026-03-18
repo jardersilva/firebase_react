@@ -20,6 +20,7 @@ import {
   Stepper,
   Step,
   StepLabel,
+  AlertColor,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
@@ -34,6 +35,7 @@ import useContacts from '../hooks/useContacts';
 import useConnections from '../hooks/useConnections';
 import { createMessage, updateMessage, deleteMessage } from '../services/messageService';
 import dayjs from 'dayjs';
+import { Contact, Message } from '../types';
 
 const muiInput = {
   '& .MuiOutlinedInput-root': {
@@ -46,13 +48,17 @@ const muiInput = {
 
 const STEPS = ['Selecionar contatos', 'Compor mensagem'];
 
-const MessagesPage = ({ showToast }) => {
-  const { connectionId } = useParams();
+interface MessagesPageProps {
+  showToast?: (message: string, severity?: AlertColor) => void;
+}
+
+const MessagesPage = ({ showToast }: MessagesPageProps) => {
+  const { connectionId } = useParams<{ connectionId: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const [statusFilter, setStatusFilter] = useState(null);
-  const { messages, loading } = useMessages(user?.uid, connectionId, statusFilter);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'sent' | 'scheduled' | null>(null);
+  const { messages, loading } = useMessages(user?.uid, connectionId, statusFilter as any);
   const { contacts } = useContacts(user?.uid, connectionId);
   const { connections } = useConnections(user?.uid);
 
@@ -61,18 +67,18 @@ const MessagesPage = ({ showToast }) => {
   // Form state
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
-  const [editingId, setEditingId] = useState(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [content, setContent] = useState('');
-  const [selectedContactIds, setSelectedContactIds] = useState([]);
+  const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
   const [isScheduled, setIsScheduled] = useState(false);
   const [scheduledAt, setScheduledAt] = useState('');
   const [saving, setSaving] = useState(false);
-  const [deleteDialog, setDeleteDialog] = useState({ open: false, id: null });
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
   const [contactSearch, setContactSearch] = useState('');
 
   const contactMap = useMemo(() => {
-    const map = {};
-    contacts.forEach((c) => { map[c.id] = c; });
+    const map: Record<string, Contact> = {};
+    contacts.forEach((c) => { map[c.id] = c as Contact; });
     return map;
   }, [contacts]);
 
@@ -86,7 +92,7 @@ const MessagesPage = ({ showToast }) => {
     );
   }, [contacts, contactSearch]);
 
-  const toggleContact = (contactId) => {
+  const toggleContact = (contactId: string) => {
     setSelectedContactIds((prev) =>
       prev.includes(contactId)
         ? prev.filter((id) => id !== contactId)
@@ -119,14 +125,14 @@ const MessagesPage = ({ showToast }) => {
     setDialogOpen(true);
   };
 
-  const openEdit = (msg) => {
+  const openEdit = (msg: Message) => {
     setEditingId(msg.id);
     setContent(msg.content);
     setSelectedContactIds(msg.contactIds || []);
     setIsScheduled(msg.status === 'scheduled');
     setScheduledAt(
       msg.scheduledAt
-        ? dayjs(msg.scheduledAt.toDate()).format('YYYY-MM-DDTHH:mm')
+        ? dayjs((msg.scheduledAt as any).toDate()).format('YYYY-MM-DDTHH:mm')
         : ''
     );
     setContactSearch('');
@@ -138,21 +144,21 @@ const MessagesPage = ({ showToast }) => {
     if (!content.trim() || selectedContactIds.length === 0) return;
     setSaving(true);
     try {
-      const scheduleDate = isScheduled && scheduledAt ? scheduledAt : null;
+      const scheduleDate = isScheduled && scheduledAt ? new Date(scheduledAt) : null;
       if (editingId) {
         await updateMessage(editingId, {
           content: content.trim(),
           contactIds: selectedContactIds,
-          scheduledAt: scheduleDate,
+          scheduledAt: scheduleDate as any,
         });
         showToast?.('Mensagem atualizada.');
-      } else {
+      } else if (user?.uid && connectionId) {
         await createMessage(
           user.uid,
           connectionId,
           selectedContactIds,
           content.trim(),
-          scheduleDate
+          scheduleDate as any
         );
         showToast?.(isScheduled ? 'Mensagem agendada.' : 'Mensagem enviada.');
       }
@@ -166,8 +172,10 @@ const MessagesPage = ({ showToast }) => {
 
   const handleDelete = async () => {
     try {
-      await deleteMessage(deleteDialog.id);
-      showToast?.('Mensagem excluída.');
+      if (deleteDialog.id) {
+        await deleteMessage(deleteDialog.id);
+        showToast?.('Mensagem excluída.');
+      }
     } catch {
       showToast?.('Erro ao excluir.', 'error');
     } finally {
@@ -175,7 +183,7 @@ const MessagesPage = ({ showToast }) => {
     }
   };
 
-  const formatDate = (timestamp) => {
+  const formatDate = (timestamp: any) => {
     if (!timestamp) return '—';
     try {
       const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);

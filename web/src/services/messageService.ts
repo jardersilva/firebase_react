@@ -8,31 +8,32 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { Message } from '../types';
 
 const COLLECTION = 'messages';
 
-export const createMessage = async (userId, connectionId, contactIds, content, scheduledAt = null) => {
+export const createMessage = async (userId: string, connectionId: string, contactIds: string[], content: string, scheduledAt: string | null = null): Promise<string> => {
   const now = new Date();
   const isScheduled = scheduledAt && new Date(scheduledAt) > now;
 
-  const data = {
+  const data: Partial<Message> = {
     content,
     contactIds,
     connectionId,
     userId,
     status: isScheduled ? 'scheduled' : 'sent',
     scheduledAt: scheduledAt ? Timestamp.fromDate(new Date(scheduledAt)) : null,
-    sentAt: isScheduled ? null : serverTimestamp(),
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
+    sentAt: isScheduled ? undefined : (serverTimestamp() as any),
+    createdAt: serverTimestamp() as any,
+    updatedAt: serverTimestamp() as any,
   };
 
   const docRef = await addDoc(collection(db, COLLECTION), data);
   return docRef.id;
 };
 
-export const updateMessage = async (id, data) => {
-  const updateData = { ...data, updatedAt: serverTimestamp() };
+export const updateMessage = async (id: string, data: Partial<Message> & { scheduledAt?: string }): Promise<void> => {
+  const updateData: any = { ...data, updatedAt: serverTimestamp() };
 
   if (data.scheduledAt) {
     const now = new Date();
@@ -48,7 +49,7 @@ export const updateMessage = async (id, data) => {
   await updateDoc(ref, updateData);
 };
 
-export const deleteMessage = async (id) => {
+export const deleteMessage = async (id: string): Promise<void> => {
   const ref = doc(db, COLLECTION, id);
   await deleteDoc(ref);
 };
